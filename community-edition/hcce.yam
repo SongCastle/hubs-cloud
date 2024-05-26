@@ -4,11 +4,11 @@ metadata:
   name: "$Namespace"
   annotations:
     domain: "$HUB_DOMAIN"
-    adm: "$ADM_EMAIL"    
+    adm: "$ADM_EMAIL"
 ---
 ########################################################################
 ###################### configs #########################################
-########################################################################  
+########################################################################
 apiVersion: v1
 kind: Secret
 metadata:
@@ -26,6 +26,7 @@ stringData:
   SMTP_PORT: "$SMTP_PORT"
   SMTP_USER: "$SMTP_USER"
   SMTP_PASS: "$SMTP_PASS"
+  SMTP_FROM: "$SMTP_FROM"
   ADM_EMAIL: "$ADM_EMAIL"
   PGRST_DB_URI: "$PGRST_DB_URI"
   GUARDIAN_KEY: "$GUARDIAN_KEY"
@@ -35,6 +36,8 @@ stringData:
   PSQL: "$PSQL"
   PERMS_KEY: '$PERMS_KEY'
   PGRST_JWT_SECRET: '$PGRST_JWT_SECRET'
+  TRTC_SDK_APP_ID: '$TRTC_SDK_APP_ID'
+  TRTC_SDK_SECRET_KEY: '$TRTC_SDK_SECRET_KEY'
 ---
 ######################################################################################
 ###################################### ingress #######################################
@@ -72,7 +75,7 @@ spec:
         backend:
           service:
             name: ret
-            port: 
+            port:
               number: 4001
   - host: assets.$HUB_DOMAIN
     http:
@@ -82,28 +85,28 @@ spec:
         backend:
           service:
             name: ret
-            port: 
+            port:
               number: 4001
       - path: /http
         pathType: ImplementationSpecific  # haproxy's "Begin with"
         backend:
           service:
             name: ret
-            port: 
+            port:
               number: 4001
       - path: /hubs
         pathType: Prefix
         backend:
           service:
             name: hubs
-            port: 
+            port:
               number: 8080
       - path: /spoke
         pathType: Prefix
         backend:
           service:
             name: spoke
-            port: 
+            port:
               number: 8080
   - host: cors.$HUB_DOMAIN
     http:
@@ -113,36 +116,36 @@ spec:
         backend:
           service:
             name: ret
-            port: 
+            port:
               number: 4001
       - path: /http
         pathType: ImplementationSpecific
         backend:
           service:
             name: ret
-            port: 
+            port:
               number: 4001
       - path: /hubs
         pathType: Prefix
         backend:
           service:
             name: hubs
-            port: 
+            port:
               number: 8080
       - path: /spoke
         pathType: Prefix
         backend:
           service:
             name: spoke
-            port: 
+            port:
               number: 8080
       - path: /nearspark
         pathType: ImplementationSpecific
         backend:
           service:
             name: nearspark
-            port: 
-              number: 5000   
+            port:
+              number: 5000
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -167,8 +170,8 @@ spec:
         backend:
           service:
             name: dialog
-            port: 
-              number: 4443          
+            port:
+              number: 4443
 ---
 ##############################################################################################
 ############################################ reticulum #######################################
@@ -307,7 +310,7 @@ data:
     # ^^^ has to be string or elixir throws (ArgumentError) argument error:erlang.byte_size(#), but why
 
     [ret."Elixir.RetWeb.Email"]
-    from = "noreply@<HUB_DOMAIN>"
+    from = "<SMTP_FROM>"
 
     [ret."Elixir.Ret.Mailer"]
     server = "<SMTP_SERVER>"
@@ -378,6 +381,10 @@ data:
 
     [ret."Elixir.Ret.Meta"]
     phx_host = "<HUB_DOMAIN>"
+
+    [ret."Elixir.Ret.TRTCUserSig"]
+    trtc_sdk_app_id = "<TRTC_SDK_APP_ID>"
+    trtc_sdk_secret_key = "<TRTC_SDK_SECRET_KEY>"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -394,7 +401,7 @@ spec:
   minReadySeconds: 15
   strategy:
     type: RollingUpdate
-    rollingUpdate: 
+    rollingUpdate:
       maxUnavailable: 0
       maxSurge: 1
   revisionHistoryLimit: 1
@@ -410,7 +417,7 @@ spec:
           type: DirectoryOrCreate
       - name: config
         configMap:
-          name: ret-config           
+          name: ret-config
       containers:
       - name: reticulum
         volumeMounts:
@@ -420,7 +427,7 @@ spec:
         - name: config
           mountPath: /home/ret
         securityContext:
-          privileged: true       
+          privileged: true
         image: mozillareality/ret:stable-latest
         ports:
         - containerPort: 9100
@@ -513,6 +520,11 @@ spec:
             secretKeyRef:
               name: configs
               key: SMTP_PASS
+        - name: turkeyCfg_SMTP_FROM
+          valueFrom:
+            secretKeyRef:
+              name: configs
+              key: SMTP_FROM
         - name: turkeyCfg_ADM_EMAIL
           valueFrom:
             secretKeyRef:
@@ -533,11 +545,21 @@ spec:
         - name: turkeyCfg_YTDL_HOST
           value: "https://hubs-ytdl-fsu7tyt32a-uc.a.run.app"
         - name: turkeyCfg_PHOTOMNEMONIC
-          value: "https://photomnemonic-fsu7tyt32a-uc.a.run.app"  
+          value: "https://photomnemonic-fsu7tyt32a-uc.a.run.app"
         - name: turkeyCfg_SPEELYCAPTOR
           value: "http://speelycaptor:5000"
         - name: turkeyCfg_STORAGE_QUOTA_GB
           value: "1000"
+        - name: turkeyCfg_TRTC_SDK_APP_ID
+          valueFrom:
+            secretKeyRef:
+              name: configs
+              key: TRTC_SDK_APP_ID
+        - name: turkeyCfg_TRTC_SDK_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: configs
+              key: TRTC_SDK_SECRET_KEY
         livenessProbe:
           httpGet:
             path: /health
@@ -563,11 +585,11 @@ spec:
         imagePullPolicy: IfNotPresent
         env:
         - name: PGRST_LOG_LEVEL
-          value: info        
+          value: info
         - name: PGRST_DB_SCHEMA
           value: ret0_admin
         - name: PGRST_DB_ANON_ROLE
-          value: postgres          
+          value: postgres
         - name: PGRST_DB_URI
           valueFrom:
             secretKeyRef:
@@ -578,6 +600,16 @@ spec:
             secretKeyRef:
               name: configs
               key: PGRST_JWT_SECRET
+        - name: TRTC_SDK_APP_ID
+          valueFrom:
+            secretKeyRef:
+              name: configs
+              key: TRTC_SDK_APP_ID
+        - name: TRTC_SDK_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: configs
+              key: TRTC_SDK_SECRET_KEY
 ---
 apiVersion: v1
 kind: Service
@@ -737,7 +769,7 @@ spec:
           valueFrom:
             secretKeyRef:
               name: configs
-              key: DB_USER          
+              key: DB_USER
         - name: DB_PASSWORD
           valueFrom:
             secretKeyRef:
@@ -779,7 +811,7 @@ spec:
   minReadySeconds: 15
   strategy:
     type: RollingUpdate
-    rollingUpdate: 
+    rollingUpdate:
       maxUnavailable: 0
       maxSurge: 1
   template:
@@ -842,14 +874,14 @@ metadata:
   annotations:
     cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
 spec:
-  replicas: 1 
+  replicas: 1
   selector:
     matchLabels:
       app: spoke
   minReadySeconds: 15
   strategy:
     type: RollingUpdate
-    rollingUpdate: 
+    rollingUpdate:
       maxUnavailable: 0
       maxSurge: 1
   template:
@@ -912,14 +944,14 @@ metadata:
   annotations:
     cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
 spec:
-  replicas: 1 
+  replicas: 1
   selector:
     matchLabels:
       app: nearspark
   minReadySeconds: 15
   strategy:
     type: RollingUpdate
-    rollingUpdate: 
+    rollingUpdate:
       maxUnavailable: 0
       maxSurge: 1
   template:
@@ -945,7 +977,7 @@ spec:
     port: 5000
     targetPort: 5000
   selector:
-    app: nearspark        
+    app: nearspark
 # ---
 # ########################################################################
 # ######################   speelycaptor   ###############################
@@ -1050,7 +1082,7 @@ stringData:
 ---
 ########################################################################
 ######################   dialog   ######################################
-########################################################################  
+########################################################################
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -1079,7 +1111,7 @@ spec:
       - name: dialog
         image: mozillareality/dialog:stable-latest
         imagePullPolicy: Always
-        ports:        
+        ports:
         - hostPort: 4443
           containerPort: 4443
         env:
@@ -1118,10 +1150,10 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app: coturn                                          
+      app: coturn
   minReadySeconds: 15
   strategy:
-    type: RollingUpdate    
+    type: RollingUpdate
   template:
     metadata:
       labels:
@@ -1175,7 +1207,7 @@ data:
   global-config-snippet: |
     tune.bufsize 33792
   backend-config-snippet: |
-    option forwardfor 
+    option forwardfor
     option http-pretend-keepalive
   ssl-redirect: "true"
   timeout-client: 30m
@@ -1300,7 +1332,7 @@ rules:
     - events
     - serviceaccounts
     - services
-    - endpoints    
+    - endpoints
     verbs:
     - get
     - list
@@ -1350,7 +1382,7 @@ rules:
     verbs:
     - get
     - list
-    - watch      
+    - watch
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
@@ -1363,4 +1395,4 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: haproxy-sa
-  namespace: $Namespace 
+  namespace: $Namespace

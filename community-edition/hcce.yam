@@ -36,6 +36,8 @@ stringData:
   PSQL: "$PSQL"
   PERMS_KEY: '$PERMS_KEY'
   PGRST_JWT_SECRET: '$PGRST_JWT_SECRET'
+  TRTC_SDK_APP_ID: '$TRTC_SDK_APP_ID'
+  TRTC_SDK_SECRET_KEY: '$TRTC_SDK_SECRET_KEY'
 ---
 ######################################################################################
 ###################################### ingress #######################################
@@ -379,6 +381,10 @@ data:
 
     [ret."Elixir.Ret.Meta"]
     phx_host = "<HUB_DOMAIN>"
+
+    [ret."Elixir.Ret.TRTCUserSig"]
+    trtc_sdk_app_id = "<TRTC_SDK_APP_ID>"
+    trtc_sdk_secret_key = "<TRTC_SDK_SECRET_KEY>"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -544,6 +550,16 @@ spec:
           value: "http://speelycaptor:5000"
         - name: turkeyCfg_STORAGE_QUOTA_GB
           value: "1000"
+        - name: turkeyCfg_TRTC_SDK_APP_ID
+          valueFrom:
+            secretKeyRef:
+              name: configs
+              key: TRTC_SDK_APP_ID
+        - name: turkeyCfg_TRTC_SDK_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: configs
+              key: TRTC_SDK_SECRET_KEY
         livenessProbe:
           httpGet:
             path: /health
@@ -584,6 +600,16 @@ spec:
             secretKeyRef:
               name: configs
               key: PGRST_JWT_SECRET
+        - name: TRTC_SDK_APP_ID
+          valueFrom:
+            secretKeyRef:
+              name: configs
+              key: TRTC_SDK_APP_ID
+        - name: TRTC_SDK_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: configs
+              key: TRTC_SDK_SECRET_KEY
 ---
 apiVersion: v1
 kind: Service

@@ -31,6 +31,7 @@ export SMTP_SERVER="changeMe"
 export SMTP_PORT="changeMe"
 export SMTP_USER="changeMe"
 export SMTP_PASS="changeMe"
+export SMTP_FROM="changeMe"
 
 export NODE_COOKIE="changeMe"
 export GUARDIAN_KEY="changeMe"

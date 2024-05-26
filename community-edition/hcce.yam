@@ -26,6 +26,7 @@ stringData:
   SMTP_PORT: "$SMTP_PORT"
   SMTP_USER: "$SMTP_USER"
   SMTP_PASS: "$SMTP_PASS"
+  SMTP_FROM: "$SMTP_FROM"
   ADM_EMAIL: "$ADM_EMAIL"
   PGRST_DB_URI: "$PGRST_DB_URI"
   GUARDIAN_KEY: "$GUARDIAN_KEY"
@@ -307,7 +308,7 @@ data:
     # ^^^ has to be string or elixir throws (ArgumentError) argument error:erlang.byte_size(#), but why
 
     [ret."Elixir.RetWeb.Email"]
-    from = "noreply@<HUB_DOMAIN>"
+    from = "<SMTP_FROM>"
 
     [ret."Elixir.Ret.Mailer"]
     server = "<SMTP_SERVER>"
@@ -513,6 +514,11 @@ spec:
             secretKeyRef:
               name: configs
               key: SMTP_PASS
+        - name: turkeyCfg_SMTP_FROM
+          valueFrom:
+            secretKeyRef:
+              name: configs
+              key: SMTP_FROM
         - name: turkeyCfg_ADM_EMAIL
           valueFrom:
             secretKeyRef:
